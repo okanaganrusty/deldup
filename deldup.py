@@ -30,6 +30,7 @@ action.add_argument('--import', type=argparse.FileType('r'), dest='import_')
 
 args = parser.parse_args()
 
+
 def calculate_md5(filename_):
     hash_ = None
 
@@ -60,12 +61,20 @@ if __name__ == '__main__':
                 continue
 
             md5 = calculate_md5(filename)
-            objects[md5] = objects.get(md5, {'filenames': [], 'count': 0})
+            objects[md5] = objects.get(md5, {
+                'filenames': [],
+                'count': 0,
+                'size': 0,
+                'total_size': 0
+            })
             objects[md5]['filenames'] = objects[md5].get('filenames') + [filename]
             objects[md5]['count'] += 1
+            objects[md5]['size'] = os.path.getsize(filename)
+            objects[md5]['total_size'] = objects[md5]['size'] * objects[md5]['count']
 
         if args.export_:
-            print(f"Exporting results [unique hashes={len(objects)}, destination={args.export_.name}]")
+            print(
+                f"Exporting results [unique hashes={len(objects)}, destination={args.export_.name}]")
             # Make a backup of the existing sys.stdout file handle
             # remap sys.stdout to our export file and dump the
             # contents of our data to sys.stdout which will either
@@ -80,6 +89,8 @@ if __name__ == '__main__':
         print(objects)
 
 if args.cleanup_:
+    total_bytes_freed = 0
+
     if args.backup_:
         # Attempt to create backup folder
         try:
@@ -102,7 +113,7 @@ if args.cleanup_:
         # before performing any move operations, including that we make sure
         # all of our files exist before proceeding.
 
-        if isinstance(filenames, list) and len(filenames) > 1 and all([os.path.isfile(key) for key in filenames_]):
+        if len(filenames) >= 1 and all([os.path.isfile(key) for key in filenames_]):
             if args.backup_:
                 print(f"Copying [{filename}] to [{args.backup_}] before deleting")
 
@@ -113,6 +124,11 @@ if args.cleanup_:
 
             for filename_ in filenames:
                 print(f"Deleting a copy of [{filename_}]")
+                total_bytes_freed += value.get('size', 0)
+
                 os.remove(filename_)
         else:
             print(f"File [{filename}] is not being moved as one or more of its copies no longer exist!")
+
+    print(f"Total bytes freed by cleanup [{total_bytes_freed}]")
+
