@@ -86,7 +86,6 @@ if __name__ == '__main__':
 
     elif args.import_:
         objects = json.load(args.import_)
-        print(objects)
 
 if args.cleanup_:
     total_bytes_freed = 0
